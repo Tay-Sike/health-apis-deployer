@@ -6,15 +6,6 @@ pipeline {
     timeout(time: 30, unit: 'MINUTES')
     timestamps()
   }
-  parameters {
-    booleanParam(name: 'PULL_IMAGES', defaultValue: true, description: 'Pull latest built images to deploy')
-    booleanParam(name: 'QA_DEPLOY', defaultValue: true, description: 'Deploy latest images to QA')
-    booleanParam(name: 'QA_TEST', defaultValue: true, description: 'Run regression tests against QA')
-    booleanParam(name: 'LAB_DEPLOY', defaultValue: false, description: 'Deploy latest images to the Lab')
-    booleanParam(name: 'LAB_TEST', defaultValue: false, description: 'Run regression tests against the Lab')
-    string(name: 'MR_URL', defaultValue: '', description: 'URL to Maintenance Request Pull Request for this change')
-    booleanParam(name: 'VERBOSE', defaultValue: false, description: 'Fill the logs with copious amounts of trace')
-  }
   agent {
     dockerfile {
        /*
@@ -31,22 +22,22 @@ pipeline {
       args "--privileged --group-add 497 -v /etc/passwd:/etc/passwd:ro -v /etc/group:/etc/group:ro -v /data/jenkins/.m2/repository:/root/.m2/repository -v /var/lib/jenkins/.ssh:/root/.ssh -v /var/run/docker.sock:/var/run/docker.sock -v /var/lib/docker:/var/lib/docker -v /etc/docker/daemon.json:/etc/docker/daemon.json"
      }
   }
-  triggers {
+/*  triggers {
     cron('00 22 * * 1-5')
     upstream(upstreamProjects: 'department-of-veterans-affairs/health-apis/master', threshold: hudson.model.Result.SUCCESS)
-  }
+  }*/
   stages {
     stage('Deploy') {
       steps {
         withCredentials([
-          usernamePassword(
+/*        usernamePassword(
             credentialsId: 'DOCKER_USERNAME_PASSWORD',
             usernameVariable: 'DOCKER_USERNAME',
             passwordVariable: 'DOCKER_PASSWORD'),
           string(
             credentialsId: 'DOCKER_SOURCE_REGISTRY',
             variable: 'DOCKER_SOURCE_REGISTRY'),
-          usernamePassword(
+            usernamePassword(
             credentialsId: 'OPENSHIFT_USERNAME_PASSWORD',
             usernameVariable: 'OPENSHIFT_USERNAME',
             passwordVariable: 'OPENSHIFT_PASSWORD'),
@@ -64,14 +55,14 @@ pipeline {
             variable: 'ARGONAUT_CLIENT_ID'),
           string(
             credentialsId: 'ARGONAUT_CLIENT_SECRET',
-            variable: 'ARGONAUT_CLIENT_SECRET')
+            variable: 'ARGONAUT_CLIENT_SECRET')         */
         ]) {
           script {
             for(cause in currentBuild.rawBuild.getCauses()) {
               env['BUILD_'+cause.class.getSimpleName().replaceAll('(.+?)([A-Z])','$1_$2').toUpperCase()]=cause.getShortDescription()
             }
             if (env.BRANCH_NAME == 'master' || env.BRANCH_NAME == 'test') {
-              sh script: './deployer.sh'
+              sh 'docker ps' /* ***************CHANGE ME****** */
             }
           }
         }
@@ -91,14 +82,14 @@ pipeline {
     failure {
       script {
         if (env.BRANCH_NAME == 'master') {
-          sendNotifications();
+          echo "sendNotifications() failure";
         }
       }
     }
     changed {
       script {
         if (env.BRANCH_NAME == 'master' && currentBuild.result != 'FAILURE') {
-          sendNotifications();
+          echo "sendNotifications() success";
         }
       }
     }
